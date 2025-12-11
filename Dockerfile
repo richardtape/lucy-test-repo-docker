@@ -1,5 +1,11 @@
 FROM rockylinux/rockylinux:9.3
-RUN dnf -y install httpd
+
+#install Apache, enable HTTPS, be able to generate SLL certs; clean cache 
+RUN dnf -y install httpd mod_ssl && dnf clean all
+
 COPY www_data/ /var/www/html/
-EXPOSE 80
+
+#HTTP and HTTPS
+EXPOSE 80 443
+
 CMD ["/usr/sbin/httpd", "-D", "FOREGROUND"]
