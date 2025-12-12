@@ -10,7 +10,7 @@ certs/
 - On how to generate these files on Mac: to be updated 
 
 ## Configure Hostname Resolution
-- On Windows: to be updated
+- On Windows: **https://confluence.it.ubc.ca/x/xIorGQ**
 - On Mac: to be updated 
   
 ## Build the Docker Image
