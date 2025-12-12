@@ -4,6 +4,7 @@ FROM rockylinux/rockylinux:9.3
 RUN dnf -y install httpd mod_ssl && dnf clean all
 
 COPY www_data/ /var/www/html/
+COPY apache/conf/http-redirect.conf /etc/httpd/conf.d/
 
 #HTTP and HTTPS
 EXPOSE 80 443
