@@ -10,10 +10,10 @@ RUN mkdir -p /run/php-fpm
 COPY www_data/ /var/www/html/
 
 #Allow HTTP redirects
-COPY apache/conf/http-redirect.conf /etc/httpd/conf.d/
+COPY conf/apache/http-redirect.conf /etc/httpd/conf.d/
 
 #Configure Apache to send PHP files to PHP-FPM via the default Unix socket
-COPY apache/conf/php-fpm.conf /etc/httpd/conf.d/
+COPY conf/apache/php-fpm.conf /etc/httpd/conf.d/
 
 #HTTP and HTTPS
 EXPOSE 80 443
