@@ -29,9 +29,13 @@ Once the container is running, you can visit:
 
 - **http://cms.test**
 - **https://cms.test**
+
+## Test if PHP is properly configured
+Visit: 
+- **https://cms.test/info.php** 
+If PHP is working correctly, you should see the PHP information page.
   
 ## To Do
 - Set up Apache to only accept HTTPS requests (redirect HTTP to HTTPS) via config files
-- PHP
 - Database container
 - Docker compose file 
