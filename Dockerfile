@@ -1,12 +1,22 @@
 FROM rockylinux/rockylinux:9.3
 
-#install Apache, enable HTTPS, be able to generate SLL certs; clean cache 
-RUN dnf -y install httpd mod_ssl && dnf clean all
+#Install Apache, PHP, enable HTTPS, be able to generate SLL certs; clean cache 
+RUN dnf -y install httpd mod_ssl php php-fpm php-cli php-common php-mysqlnd && dnf clean all
 
+#Creates /run/php-fpm directory needed for php-fpm as it is not automatically created by the container
+RUN mkdir -p /run/php-fpm
+
+#Copy site content
 COPY www_data/ /var/www/html/
+
+#Allow HTTP redirects
 COPY apache/conf/http-redirect.conf /etc/httpd/conf.d/
+
+#Configure Apache to send PHP files to PHP-FPM via the default Unix socket
+COPY apache/conf/php-fpm.conf /etc/httpd/conf.d/
 
 #HTTP and HTTPS
 EXPOSE 80 443
 
-CMD ["/usr/sbin/httpd", "-D", "FOREGROUND"]
+#run php-fpm in background, Apache as main container process in forground 
+CMD ["/bin/bash", "-c", "php-fpm && exec /usr/sbin/httpd -D FOREGROUND"]
