@@ -15,6 +15,9 @@ COPY conf/apache/http-redirect.conf /etc/httpd/conf.d/
 #Configure Apache to send PHP files to PHP-FPM via the default Unix socket
 COPY conf/apache/php-fpm.conf /etc/httpd/conf.d/
 
+#load PHP runtime customization
+COPY conf/php/99-php.ini /etc/php.d/
+
 #HTTP and HTTPS
 EXPOSE 80 443
 
