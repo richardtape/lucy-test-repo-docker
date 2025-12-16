@@ -21,7 +21,6 @@ RUN dnf -y module reset php \
     php-gd \
     php-intl \
     php-exif \
-    php-sodium \
     php-opcache \
     php-fileinfo \
     php-dom \
@@ -45,4 +44,4 @@ COPY conf/php/99-php.ini /etc/php.d/
 EXPOSE 80 443
 
 #run php-fpm in background, Apache as main container process in forground 
-CMD ["/bin/bash", "-c", "php-fpm && exec /usr/sbin/httpd -D FOREGROUND"]
+CMD ["/bin/bash", "-c", "php-fpm -D && exec /usr/sbin/httpd -D FOREGROUND"]
