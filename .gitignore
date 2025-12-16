@@ -1,11 +1,14 @@
 # SSL/TLS certificates
-certs/*.key
-certs/*.crt
-certs/*.csr
-certs/*.pem
-certs/*.srl
-certs/*.ext
+**/*.key
+**/*.crt
+**/*.csr
+**/*.pem
+**/*.srl
+**/*.ext
 
 # CA files (never commit CA keys)
 **/myCA.key
 **/myCA.pem
+
+#env file
+.env
