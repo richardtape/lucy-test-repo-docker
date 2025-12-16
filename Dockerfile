@@ -9,11 +9,8 @@ RUN mkdir -p /run/php-fpm
 #Copy site content
 COPY www_data/ /var/www/html/
 
-#Allow HTTP redirects
-COPY conf/apache/http-redirect.conf /etc/httpd/conf.d/
-
-#Configure Apache to send PHP files to PHP-FPM via the default Unix socket
-COPY conf/apache/php-fpm.conf /etc/httpd/conf.d/
+#Allow custom Apache configs to be applied 
+COPY conf/apache/apache-local.conf /etc/httpd/conf.d/
 
 #load PHP runtime customization
 COPY conf/php/99-php.ini /etc/php.d/
