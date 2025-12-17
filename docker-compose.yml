@@ -1,0 +1,58 @@
+services:
+  apache-php:
+    build:
+      context: ./apache-php
+    image: local/rocky-apache-php:dev
+
+    env_file:
+      - .env
+
+    ports:
+      - "80:80"
+      - "443:443"
+
+    volumes:
+      #SSL certs
+      - ./apache-php/certs/localhost.crt:/etc/pki/tls/certs/localhost.crt:ro
+      - ./apache-php/certs/localhost.key:/etc/pki/tls/private/localhost.key:ro
+      #page content 
+      - ./apache-php/www_data:/var/www/html
+        # Apache custom conf 
+      - ./apache-php/conf/apache/apache-local.conf:/etc/httpd/conf.d/apache-local.conf:ro
+      # PHP runtime custom conf
+      - ./apache-php/conf/php/99-php.ini:/etc/php.d/99-php.ini:ro
+      # PHP-FPM pool override custom conf
+      - ./apache-php/conf/php/zzz-env.conf:/etc/php-fpm.d/zzz-env.conf:ro
+
+
+    depends_on:
+      - mariadb
+
+    networks:
+      - app_net
+      - db_net
+
+  mariadb:
+    image: mariadb:10.11-ubi9
+    container_name: mariadb
+
+    env_file:
+      - .env
+
+    volumes:
+      - mariadb_data:/var/lib/mysql
+      - ./db/init:/docker-entrypoint-initdb.d:ro
+
+    networks:
+      - db_net
+
+networks:
+  app_net:
+    driver: bridge
+
+  db_net:
+    driver: bridge
+    internal: true
+
+volumes:
+  mariadb_data:
