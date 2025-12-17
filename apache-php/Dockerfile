@@ -12,7 +12,7 @@ RUN dnf -y module reset php \
     php-cli \
     php-common \
     php-mysqlnd \
-     php-json \
+    php-json \
     php-curl \
     php-mbstring \
     php-openssl \
@@ -33,12 +33,6 @@ RUN mkdir -p /run/php-fpm
 
 #Copy site content
 COPY www_data/ /var/www/html/
-
-#Allow custom Apache configs to be applied 
-COPY conf/apache/apache-local.conf /etc/httpd/conf.d/
-
-#load PHP runtime customization
-COPY conf/php/99-php.ini /etc/php.d/
 
 #HTTP and HTTPS
 EXPOSE 80 443
