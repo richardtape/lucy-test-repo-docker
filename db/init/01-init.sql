@@ -1,0 +1,13 @@
+-- Example DB
+CREATE DATABASE IF NOT EXISTS cms_db
+  CHARACTER SET utf8mb4
+  COLLATE utf8mb4_unicode_ci;
+
+USE cms_db;
+
+-- Example table
+CREATE TABLE IF NOT EXISTS example (
+  id INT PRIMARY KEY AUTO_INCREMENT,
+  message VARCHAR(255),
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
