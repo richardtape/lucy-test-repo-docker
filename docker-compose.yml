@@ -1,7 +1,7 @@
 services:
-  apache-php:
+  web-node:
     build:
-      context: ./apache-php
+      context: ./web-node
     image: local/rocky-apache-php:dev
 
     env_file:
@@ -13,35 +13,35 @@ services:
 
     volumes:
       #SSL certs
-      - ./apache-php/certs/localhost.crt:/etc/pki/tls/certs/localhost.crt:ro
-      - ./apache-php/certs/localhost.key:/etc/pki/tls/private/localhost.key:ro
+      - ./web-node/certs/localhost.crt:/etc/pki/tls/certs/localhost.crt:ro
+      - ./web-node/certs/localhost.key:/etc/pki/tls/private/localhost.key:ro
       #page content 
-      - ./apache-php/www_data:/var/www/html
+      - ./web-node/www_data:/var/www/html
         # Apache custom conf 
-      - ./apache-php/conf/apache/apache-local.conf:/etc/httpd/conf.d/apache-local.conf:ro
+      - ./web-node/conf/apache/apache-local.conf:/etc/httpd/conf.d/apache-local.conf:ro
       # PHP runtime custom conf
-      - ./apache-php/conf/php/99-php.ini:/etc/php.d/99-php.ini:ro
+      - ./web-node/conf/php/99-php.ini:/etc/php.d/99-php.ini:ro
       # PHP-FPM pool override custom conf
-      - ./apache-php/conf/php/zzz-env.conf:/etc/php-fpm.d/zzz-env.conf:ro
+      - ./web-node/conf/php/zzz-env.conf:/etc/php-fpm.d/zzz-env.conf:ro
 
 
     depends_on:
-      - mariadb
+      - db-primary
 
     networks:
       - app_net
       - db_net
 
-  mariadb:
+  db-primary:
     image: mariadb:10.11-ubi9
-    container_name: mariadb
+    container_name: db-primary
 
     env_file:
       - .env
 
     volumes:
       - mariadb_data:/var/lib/mysql
-      - ./db/init:/docker-entrypoint-initdb.d:ro
+      - ./db-primary/init:/docker-entrypoint-initdb.d:ro
 
     networks:
       - db_net
