@@ -13,18 +13,13 @@ certs/
 - On Windows: **https://confluence.it.ubc.ca/x/xIorGQ**
 - On Mac: to be updated 
   
-## Build the Docker Image
+## Build the Containers
 Run the following command from the project root:
 
 ```bash
-docker build -t rockyapache .
+docker compose up -d
 ```
-## Run the HTTPS-Enabled Container
-Use this command to launch the container:
 
-```bash
-docker run -d   -p 80:80   -p 443:443   --name mycontainer   -v ./certs/localhost.crt:/etc/pki/tls/certs/localhost.crt:ro   -v ./certs/localhost.key:/etc/pki/tls/private/localhost.key:ro   rockyapache
-```
 Once the container is running, you can visit:
 
 - **http://cms.test**
@@ -34,8 +29,12 @@ Once the container is running, you can visit:
 Visit: 
 - **https://cms.test/info.php** 
 If PHP is working correctly, you should see the PHP information page.
+
+## Test if web node can do CRUD operations on database container
+Visit: 
+- **https://cms.test/db-crud-test.php**
+If the connection is working properly, you should see text that says "CRUD test PASSED"; otherwise you'd see "CRUD test FAILED". 
   
 ## To Do
-- Set up Apache to only accept HTTPS requests (redirect HTTP to HTTPS) via config files
-- Database container
-- Docker compose file 
+- set up NFS machine 
+
