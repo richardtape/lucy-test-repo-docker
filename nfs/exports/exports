@@ -1,0 +1,2 @@
+# Only allow clients from the nfs_net subnet (pinned in compose) read and write
+/exports/shared 172.30.0.0/16(rw,sync,no_subtree_check,root_squash,anonuid=1001,anongid=1001)

@@ -23,14 +23,32 @@ services:
       - ./web-node/conf/php/99-php.ini:/etc/php.d/99-php.ini:ro
       # PHP-FPM pool override custom conf
       - ./web-node/conf/php/zzz-env.conf:/etc/php-fpm.d/zzz-env.conf:ro
-
+      # Mount NFS as the web root
+      - nfs_shared:/www_data/www:rw
 
     depends_on:
       - db-primary
+      - nfs
 
     networks:
       - app_net
       - db_net
+      - nfs_net
+
+  nfs:
+    build:
+      context: ./nfs
+    image: local/nfs-server:dev
+    container_name: nfs
+    privileged: true
+
+    # backing storage for the export
+    volumes:
+      - nfs_data:/exports/shared
+
+    networks:
+      nfs_net:
+        ipv4_address: 172.30.0.10
 
   db-primary:
     image: mariadb:10.11-ubi9
@@ -54,5 +72,21 @@ networks:
     driver: bridge
     internal: true
 
+  nfs_net:
+    driver: bridge
+    internal: true
+    ipam:
+      config:
+        - subnet: 172.30.0.0/16
+
 volumes:
   mariadb_data:
+  nfs_data:
+
+  # Docker-managed NFS client mount 
+  nfs_shared:
+    driver: local
+    driver_opts:
+      type: nfs
+      o: addr=172.30.0.10,rw,nfsvers=4
+      device: ":/exports/shared"

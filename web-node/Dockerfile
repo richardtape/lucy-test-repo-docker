@@ -28,6 +28,10 @@ RUN dnf -y module reset php \
     php-iconv \
     && dnf clean all
 
+#create same user and group as nfs
+RUN groupadd -g 1001 webgrp \
+&& useradd  -u 1001 -g 1001 -M -s /sbin/nologin websvc
+
 #Creates /run/php-fpm directory needed for php-fpm as it is not automatically created by the container
 RUN mkdir -p /run/php-fpm
 
