@@ -14,17 +14,13 @@ RUN groupadd -g 1001 webgrp \
 RUN mkdir -p /exports/shared
 RUN chown -R 1001:1001 /exports/shared
 
-# Copy NFS export rules
-COPY exports/exports /etc/exports
+# Copy entrypoint script and make it executable 
+COPY entrypoint.sh /usr/local/bin/entrypoint.sh
+RUN chmod +x /usr/local/bin/entrypoint.sh
+
 
 # Expose NFS-related ports
-EXPOSE 2049 111
+EXPOSE 2049
 
-# Start rpcbind + NFS server
-CMD ["/bin/bash", "-lc", "\
-mkdir -p /run/nfs && \
-rpcbind -w && \
-rpc.mountd -F & \
-exportfs -rv && \
-exec rpc.nfsd -F -V 4 8 \
-"]
+#run entrypoint.sh
+ENTRYPOINT [ "/usr/local/bin/entrypoint.sh" ]
