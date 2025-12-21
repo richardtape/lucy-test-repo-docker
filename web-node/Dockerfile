@@ -26,6 +26,7 @@ RUN dnf -y module reset php \
     php-dom \
     php-simplexml \
     php-iconv \
+    nfs-utils \
     && dnf clean all
 
 #create same user and group as nfs
@@ -35,11 +36,12 @@ RUN groupadd -g 1001 webgrp \
 #Creates /run/php-fpm directory needed for php-fpm as it is not automatically created by the container
 RUN mkdir -p /run/php-fpm
 
-#Copy site content
-COPY www_data/ /var/www/html/
+# Copy entrypoint script
+COPY entrypoint.sh /usr/local/bin/entrypoint.sh
+RUN chmod +x /usr/local/bin/entrypoint.sh
 
 #HTTP and HTTPS
 EXPOSE 80 443
 
-#run php-fpm in background, Apache as main container process in forground 
-CMD ["/bin/bash", "-c", "php-fpm -D && exec /usr/sbin/httpd -D FOREGROUND"]
+# Use entrypoint
+ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
