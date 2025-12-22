@@ -5,7 +5,7 @@ set -euo pipefail
 
 #allow mount to web-node from NFS 
 cat <<EOF > /etc/exports
-/exports/shared web-node(rw,sync,no_subtree_check,root_squash,anonuid=1001,anongid=1001)
+/exports/shared *(rw,sync,no_subtree_check,root_squash,anonuid=1001,anongid=1001)
 # Add another in the future
 EOF
 
@@ -20,8 +20,11 @@ echo "Exporting file system"
 exportfs -rv
 
 echo "Starting mount daemon in background"
-rpc.mountd -F &
+rpc.mountd 
 
 echo "Starting nfs daemon in foreground"
-exec rpc.nfsd -F -V 4 8
+rpc.nfsd -V 4 8
 
+echo "NFS server is running"
+
+sleep 86400

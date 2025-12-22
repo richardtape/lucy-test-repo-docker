@@ -11,20 +11,23 @@ services:
       - "80:80"
       - "443:443"
 
+    cap_add:
+      - SYS_ADMIN
+
     volumes:
       #SSL certs
       - ./web-node/certs/localhost.crt:/etc/pki/tls/certs/localhost.crt:ro
       - ./web-node/certs/localhost.key:/etc/pki/tls/private/localhost.key:ro
-      #page content 
-      - ./web-node/www_data:/var/www/html
-        # Apache custom conf 
+      #page content; no longer needed as document root has been set to www_data/www 
+      #- ./web-node/www_data:/var/www/html
+      # Apache custom conf 
       - ./web-node/conf/apache/apache-local.conf:/etc/httpd/conf.d/apache-local.conf:ro
       # PHP runtime custom conf
       - ./web-node/conf/php/99-php.ini:/etc/php.d/99-php.ini:ro
       # PHP-FPM pool override custom conf
       - ./web-node/conf/php/zzz-env.conf:/etc/php-fpm.d/zzz-env.conf:ro
       # Mount NFS as the web root
-      - nfs_shared:/www_data/www:rw
+      #- nfs_shared:/www_data/www:rw
 
     depends_on:
       - db-primary
@@ -47,8 +50,7 @@ services:
       - nfs_data:/exports/shared
 
     networks:
-      nfs_net:
-        ipv4_address: 172.30.0.10
+      - nfs_net
 
   db-primary:
     image: mariadb:10.11-ubi9
@@ -75,18 +77,8 @@ networks:
   nfs_net:
     driver: bridge
     internal: true
-    ipam:
-      config:
-        - subnet: 172.30.0.0/16
 
 volumes:
   mariadb_data:
   nfs_data:
 
-  # Docker-managed NFS client mount 
-  nfs_shared:
-    driver: local
-    driver_opts:
-      type: nfs
-      o: addr=172.30.0.10,rw,nfsvers=4
-      device: ":/exports/shared"

@@ -27,6 +27,7 @@ RUN dnf -y module reset php \
     php-simplexml \
     php-iconv \
     nfs-utils \
+    nmap-ncat \
     && dnf clean all
 
 #create same user and group as nfs
