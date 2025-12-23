@@ -1,0 +1,3 @@
+-- allow replica user to be a replication client and receive all replication events for all db and tables
+CREATE USER IF NOT EXISTS '${REPL_USER}'@'%' IDENTIFIED BY '${REPL_PASSWORD}';
+GRANT REPLICATION SLAVE ON *.* TO '${REPL_USER}'@'%';
