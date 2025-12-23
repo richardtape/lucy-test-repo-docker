@@ -62,15 +62,39 @@ services:
     volumes:
       - mariadb_data:/var/lib/mysql
       - ./db-primary/init:/docker-entrypoint-initdb.d:ro
+      - ./db-primary/conf:/etc/my.cnf.d:ro
 
     networks:
       - db_net
+      - db_secondary_net
+
+  db-secondary: 
+    image: mariadb:10.11-ubi9
+    container_name: db-secondary
+
+    env_file:
+      - ./db-secondary/.env
+
+    volumes:
+      - mariadb_secondary_data:/var/lib/mysql
+      - ./db-secondary/init:/docker-entrypoint-initdb.d:ro
+      - ./db-secondary/conf:/etc/my.cnf.d:ro
+
+    depends_on:
+    - db-primary
+
+    networks:
+      - db_secondary_net
 
 networks:
   app_net:
     driver: bridge
 
   db_net:
+    driver: bridge
+    internal: true
+  
+  db_secondary_net: 
     driver: bridge
     internal: true
 
@@ -80,5 +104,6 @@ networks:
 
 volumes:
   mariadb_data:
+  mariadb_secondary_data:
   nfs_data:
 
