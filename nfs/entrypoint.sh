@@ -25,10 +25,10 @@ cleanup() {
 
 trap cleanup SIGTERM SIGINT
 
-#allow mount to web-node from NFS 
+#allow mount to web-node from NFS
+# fsid=0 makes this the NFSv4 pseudo-root (required for NFSv4 clients)
 cat <<EOF > /etc/exports
-/exports/shared *(rw,sync,no_subtree_check,root_squash,anonuid=1001,anongid=1001)
-# Add another in the future
+/exports/shared *(rw,sync,no_subtree_check,root_squash,fsid=0,anonuid=1001,anongid=1001)
 EOF
 
 # Required runtime directories (not created automatically in containers)
