@@ -22,22 +22,35 @@ echo "Creating mount point at /www_data/www"
 mkdir -p /www_data/www
 
 # Mount NFS share (mirrors production /etc/fstab mount)
-# With fsid=0 on the export, NFSv4 clients mount the pseudo-root with "/"
 echo "Mounting NFS share nfs:/ -> /www_data/www"
-# NFSv4 mount options:
-# - nfsvers=4: Use NFSv4 (doesn't need mountd/portmapper)
-# - soft,timeo=50,retrans=2: Don't hang forever on network issues
-# - nolock: Skip NLM locking (avoid nlockmgr port issues in containers)
-# - proto=tcp,port=2049: Explicitly use TCP on port 2049
+
+# Check if NFS kernel modules are available
+echo "Checking NFS kernel support..."
+cat /proc/filesystems | grep nfs || echo "WARNING: NFS not in /proc/filesystems"
+lsmod | grep nfs || echo "Note: NFS modules not listed (may be built-in)"
+
+# Try verbose mount to see what's happening
+echo "Attempting mount with verbose output..."
 MOUNT_OPTS="nfsvers=4,soft,timeo=50,retrans=2,nolock,proto=tcp,port=2049"
 echo "Using mount options: $MOUNT_OPTS"
-if timeout 30 mount -t nfs4 -o "$MOUNT_OPTS" nfs:/ /www_data/www; then
+
+# Capture mount output including errors
+mount -v -t nfs4 -o "$MOUNT_OPTS" nfs:/ /www_data/www 2>&1 && MOUNT_SUCCESS=true || MOUNT_SUCCESS=false
+
+if [ "$MOUNT_SUCCESS" = "true" ]; then
     echo "NFS mount successful"
 else
-    echo "ERROR: NFS mount failed or timed out!"
-    echo "Attempting to show mount diagnostics..."
-    showmount -e nfs 2>&1 || echo "showmount failed"
+    echo "ERROR: NFS mount failed!"
+    echo ""
+    echo "=== Diagnostics ==="
+    echo "rpcinfo output:"
     rpcinfo -p nfs 2>&1 || echo "rpcinfo failed"
+    echo ""
+    echo "Trying showmount:"
+    showmount -e nfs 2>&1 || echo "showmount failed"
+    echo ""
+    echo "Checking dmesg for NFS errors:"
+    dmesg | tail -20 2>&1 || echo "dmesg not available"
     exit 1
 fi
 
