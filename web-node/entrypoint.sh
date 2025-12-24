@@ -2,26 +2,41 @@
 #exit on error, unset variable, pipeline fail
 set -euo pipefail
 
-#wait until nfs is ready; if not sleep for 1 sec; all stdout and stderr go to /dev/null (blackhole)
-echo "Waiting for the NFS Server to be ready"
-until nc -z nfs 2049 
-do
-    echo "NFS Server not ready yet..."
+# Wait for NFS server to be ready (port 2049 must be open)
+echo "Waiting for NFS server port to be ready..."
+until nc -z nfs 2049; do
+    echo "NFS server not ready yet..."
     sleep 1
 done
-sleep 5
-echo "NFS Server is ready"
+echo "NFS server port is open"
 
-# Resolve NFS IP once
+# Give NFS server a moment to fully initialize its exports
+sleep 2
+
+# Resolve NFS hostname to IP for logging
 NFS_IP=$(getent hosts nfs | awk '{print $1}')
-echo "Resolved NFS IP: $NFS_IP"
+echo "Resolved NFS server IP: $NFS_IP"
 
-echo "Creating mount point"
+# Create mount point
+echo "Creating mount point at /www_data/www"
 mkdir -p /www_data/www
 
-echo "Mounting NFS shared directory"
-#mount -t nfs4 "$NFS_IP:/exports/shared" /www_data/www
-mount -t nfs4 nfs:/exports/shared /www_data/www
+# Mount NFS share (mirrors production /etc/fstab mount)
+echo "Mounting NFS share nfs:/exports/shared -> /www_data/www"
+if mount -t nfs4 nfs:/exports/shared /www_data/www; then
+    echo "NFS mount successful"
+else
+    echo "ERROR: NFS mount failed!"
+    exit 1
+fi
+
+# Verify mount is working
+if mountpoint -q /www_data/www; then
+    echo "Verified: /www_data/www is a valid mount point"
+else
+    echo "ERROR: /www_data/www is not a valid mount point"
+    exit 1
+fi
 
 echo "Starting PHP-FPM daemon in background"
 php-fpm -D

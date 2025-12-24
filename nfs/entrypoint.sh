@@ -22,9 +22,18 @@ exportfs -rv
 echo "Starting mount daemon in background"
 rpc.mountd 
 
-echo "Starting nfs daemon in foreground"
+echo "Starting nfs daemon"
 rpc.nfsd -V 4 8
 
 echo "NFS server is running"
 
-sleep 86400
+# Keep the container alive and provide a way to check if NFS is healthy
+# This replaces the debugging 'sleep 86400' with a proper idle loop
+while true; do
+    # Verify NFS is still exporting - if not, exit so container restarts
+    if ! exportfs -s | grep -q "/exports/shared"; then
+        echo "ERROR: NFS export disappeared, exiting"
+        exit 1
+    fi
+    sleep 60
+done
