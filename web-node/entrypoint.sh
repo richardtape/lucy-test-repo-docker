@@ -23,10 +23,14 @@ mkdir -p /www_data/www
 
 # Mount NFS share (mirrors production /etc/fstab mount)
 echo "Mounting NFS share nfs:/exports/shared -> /www_data/www"
-if mount -t nfs4 nfs:/exports/shared /www_data/www; then
+echo "Using mount options: nfsvers=4,soft,timeo=50,retrans=2"
+if timeout 30 mount -t nfs4 -o nfsvers=4,soft,timeo=50,retrans=2 nfs:/exports/shared /www_data/www; then
     echo "NFS mount successful"
 else
-    echo "ERROR: NFS mount failed!"
+    echo "ERROR: NFS mount failed or timed out!"
+    echo "Attempting to show mount diagnostics..."
+    showmount -e nfs 2>&1 || echo "showmount failed"
+    rpcinfo -p nfs 2>&1 || echo "rpcinfo failed"
     exit 1
 fi
 
