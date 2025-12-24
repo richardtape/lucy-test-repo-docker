@@ -11,8 +11,8 @@ services:
       - "80:80"
       - "443:443"
 
-    cap_add:
-      - SYS_ADMIN
+    # Required for mounting NFS inside the container (mirrors /etc/fstab mount in production)
+    privileged: true
 
     volumes:
       #SSL certs
