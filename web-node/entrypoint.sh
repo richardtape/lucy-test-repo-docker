@@ -22,15 +22,16 @@ echo "Creating mount point at /www_data/www"
 mkdir -p /www_data/www
 
 # Mount NFS share (mirrors production /etc/fstab mount)
-echo "Mounting NFS share nfs:/exports/shared -> /www_data/www"
-# NFSv4.2 mount options:
-# - nfsvers=4.2: Use NFSv4.2 (doesn't need mountd/portmapper)
+# With fsid=0 on the export, NFSv4 clients mount the pseudo-root with "/"
+echo "Mounting NFS share nfs:/ -> /www_data/www"
+# NFSv4 mount options:
+# - nfsvers=4: Use NFSv4 (doesn't need mountd/portmapper)
 # - soft,timeo=50,retrans=2: Don't hang forever on network issues
 # - nolock: Skip NLM locking (avoid nlockmgr port issues in containers)
 # - proto=tcp,port=2049: Explicitly use TCP on port 2049
-MOUNT_OPTS="nfsvers=4.2,soft,timeo=50,retrans=2,nolock,proto=tcp,port=2049"
+MOUNT_OPTS="nfsvers=4,soft,timeo=50,retrans=2,nolock,proto=tcp,port=2049"
 echo "Using mount options: $MOUNT_OPTS"
-if timeout 30 mount -t nfs4 -o "$MOUNT_OPTS" nfs:/exports/shared /www_data/www; then
+if timeout 30 mount -t nfs4 -o "$MOUNT_OPTS" nfs:/ /www_data/www; then
     echo "NFS mount successful"
 else
     echo "ERROR: NFS mount failed or timed out!"
