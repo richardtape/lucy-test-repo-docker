@@ -1,4 +1,7 @@
-FROM rockylinux/rockylinux:9.3
+FROM rockylinux/rockylinux:9
+
+# Clean DNF cache to avoid module metadata corruption issues
+RUN dnf clean all && rm -rf /var/cache/dnf
 
 #Install Apache, PHP, PHP extensions, enable HTTPS, be able to generate SLL certs; clean cache 
 #Pin PHP version to 8.2;

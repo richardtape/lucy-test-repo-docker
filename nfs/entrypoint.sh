@@ -3,6 +3,28 @@
 #exit on error, unset variable, pipeline fail
 set -euo pipefail
 
+# Handle shutdown signals gracefully
+
+cleanup() {
+
+    echo "Shutting down NFS server..."
+
+    exportfs -ua
+
+    kill $(cat /run/nfs/rpc.statd.pid 2>/dev/null) 2>/dev/null || true
+
+    killall rpc.mountd 2>/dev/null || true
+
+    killall rpc.nfsd 2>/dev/null || true
+
+    rpcbind -w -k 2>/dev/null || true
+
+    exit 0
+
+}
+
+trap cleanup SIGTERM SIGINT
+
 #allow mount to web-node from NFS 
 cat <<EOF > /etc/exports
 /exports/shared *(rw,sync,no_subtree_check,root_squash,anonuid=1001,anongid=1001)

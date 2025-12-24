@@ -1,14 +1,14 @@
-FROM rockylinux/rockylinux:9.3
+FROM rockylinux/rockylinux:9
+
+# Clean DNF cache to avoid module metadata corruption issues
+RUN dnf clean all && rm -rf /var/cache/dnf
 
 # Install NFS utilities
-RUN dnf -y install \
-    nfs-utils \
-    rpcbind \
-    && dnf clean all
+RUN dnf -y install nfs-utils rpcbind
+RUN dnf clean all
 
 # Create the shared service identity (match this in web-node too)
-RUN groupadd -g 1001 webgrp \
- && useradd  -u 1001 -g 1001 -M -s /sbin/nologin websvc
+RUN groupadd -g 1001 webgrp && useradd  -u 1001 -g 1001 -M -s /sbin/nologin websvc
 
 # Create export directory
 RUN mkdir -p /exports/shared
