@@ -5,7 +5,6 @@ RUN dnf clean all && rm -rf /var/cache/dnf
 
 #Install Apache, PHP, PHP extensions, enable HTTPS, be able to generate SLL certs; clean cache 
 #Pin PHP version to 8.2;
-RUN dnf -y module reset php
 RUN dnf -y module enable php:8.2
 RUN dnf -y install httpd mod_ssl php php-fpm php-cli php-common php-mysqlnd php-json php-curl php-mbstring php-openssl php-zip php-xml php-gd php-intl php-exif php-opcache php-fileinfo php-dom php-simplexml php-iconv nfs-utils nmap-ncat
 RUN dnf clean all

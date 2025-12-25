@@ -47,7 +47,8 @@ services:
 
     # backing storage for the export
     volumes:
-      - nfs_data:/exports/shared
+      - ./nfs/exports:/staging:ro
+      - nfs_export_data:/exports
 
     networks:
       nfs_net:
@@ -62,14 +63,14 @@ services:
 
     volumes:
       - mariadb_data:/var/lib/mysql
-      - ./db-primary/init:/docker-entrypoint-initdb.d:ro
+      - ./db-primary/init:/docker-entrypoint-initdb.d
       - ./db-primary/conf:/etc/my.cnf.d:ro
 
     networks:
       - db_net
       - db_secondary_net
 
-  db-secondary: 
+  db-secondary:
     image: mariadb:10.11-ubi9
     container_name: db-secondary
 
@@ -82,7 +83,7 @@ services:
       - ./db-secondary/conf:/etc/my.cnf.d:ro
 
     depends_on:
-    - db-primary
+      - db-primary
 
     networks:
       - db_secondary_net
@@ -94,8 +95,8 @@ networks:
   db_net:
     driver: bridge
     internal: true
-  
-  db_secondary_net: 
+
+  db_secondary_net:
     driver: bridge
     internal: true
 
@@ -110,4 +111,6 @@ volumes:
   mariadb_data:
   mariadb_secondary_data:
   nfs_data:
+  nfs_export_data:
+
 

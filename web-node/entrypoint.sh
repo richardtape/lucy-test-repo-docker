@@ -35,8 +35,10 @@ MOUNT_OPTS="nfsvers=4,soft,timeo=50,retrans=2,nolock,proto=tcp,port=2049"
 echo "Using mount options: $MOUNT_OPTS"
 
 # Run mount with timeout using IP address
-echo "Running: mount -v -t nfs4 -o $MOUNT_OPTS $NFS_IP:/ /www_data/www"
-if timeout 30 mount -v -t nfs4 -o "$MOUNT_OPTS" "$NFS_IP":/ /www_data/www; then
+# Run mount with timeout using IP address
+# We mount /shared because ganesha.conf uses Pseudo = /shared
+echo "Running: mount -v -t nfs4 -o $MOUNT_OPTS $NFS_IP:/shared /www_data/www"
+if timeout 30 mount -v -t nfs4 -o "$MOUNT_OPTS" "$NFS_IP":/shared /www_data/www; then
     MOUNT_SUCCESS=true
 else
     MOUNT_EXIT_CODE=$?
@@ -71,6 +73,17 @@ fi
 
 echo "Starting PHP-FPM daemon in background"
 php-fpm -D
+
+# Wait for socket to be created
+echo "Waiting for PHP-FPM socket..."
+while [ ! -S /run/php-fpm/www.sock ]; do
+    sleep 0.5
+done
+echo "PHP-FPM socket created"
+
+# Fix permissions on the socket so Apache (user websvc) can read/write to it
+chown websvc:webgrp /run/php-fpm/www.sock
+chmod 0660 /run/php-fpm/www.sock
 
 #runs apache in forground as main container process (PID1)
 echo "Starting Apache"
