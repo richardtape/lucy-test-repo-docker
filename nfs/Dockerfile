@@ -9,7 +9,7 @@ RUN dnf -y install 'dnf-command(config-manager)'
 RUN dnf config-manager --set-enabled crb
 RUN dnf -y install epel-release
 RUN dnf -y install centos-release-nfs-ganesha
-RUN dnf -y install nfs-ganesha nfs-ganesha-vfs rpcbind procps-ng iproute hostname rsync
+RUN dnf -y install nfs-ganesha nfs-ganesha-vfs rpcbind procps-ng iproute hostname rsync inotify-tools
 RUN dnf clean all
 
 # Setup exports directory

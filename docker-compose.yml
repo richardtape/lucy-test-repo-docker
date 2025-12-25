@@ -18,16 +18,13 @@ services:
       #SSL certs
       - ./web-node/certs/localhost.crt:/etc/pki/tls/certs/localhost.crt:ro
       - ./web-node/certs/localhost.key:/etc/pki/tls/private/localhost.key:ro
-      #page content; no longer needed as document root has been set to www_data/www 
-      #- ./web-node/www_data:/var/www/html
       # Apache custom conf 
       - ./web-node/conf/apache/apache-local.conf:/etc/httpd/conf.d/apache-local.conf:ro
       # PHP runtime custom conf
       - ./web-node/conf/php/99-php.ini:/etc/php.d/99-php.ini:ro
       # PHP-FPM pool override custom conf
+      # PHP-FPM pool override custom conf
       - ./web-node/conf/php/zzz-env.conf:/etc/php-fpm.d/zzz-env.conf:ro
-      # Mount NFS as the web root
-      #- nfs_shared:/www_data/www:rw
 
     depends_on:
       - db-primary
@@ -46,6 +43,9 @@ services:
     privileged: true
 
     # backing storage for the export
+    # Sync Strategy:
+    # 1. Mount host directory to /staging (read-only) for inotify/rsync
+    # 2. Use named volume 'nfs_export_data' for actual NFS export (native Linux FS)
     volumes:
       - ./nfs/exports:/staging:ro
       - nfs_export_data:/exports

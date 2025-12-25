@@ -23,7 +23,13 @@ echo "Starting sync loop..."
         if [ -d "/staging/shared" ]; then
              rsync -a --delete /staging/shared/ /exports/shared/
         fi
-        sleep 1
+        
+        # Wait for changes in /staging/shared OR timeout after 1 second
+        # -r: recursive
+        # -e: events to watch
+        # -t 1: timeout 1 second (safety net)
+        # || true: prevent script exit on timeout (inotifywait returns 1 on timeout)
+        inotifywait -r -e modify,create,delete,move -t 1 /staging/shared || true
     done
 ) &
 

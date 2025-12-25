@@ -36,12 +36,22 @@ Visit:
 If the connection is working properly, you should see text that says "CRUD test PASSED"; otherwise you'd see "CRUD test FAILED". 
   
 ## NFS Architecture
-The NFS configuration in this repo uses the **Kernel NFS Server** within a Docker container. This setup mimics a production NAS/NFS appliance.
+The NFS configuration uses **NFS-Ganesha** in a Docker container to provide a persistent, compatible NFSv4 server that works reliably across platforms (including macOS).
+
+### The "Sync Strategy" (macOS Compatibility)
+To solve macOS filesystem limitations (lack of file handles support in Docker bind mounts) while retaining local development capabilities:
+1.  **Dual Storage**: 
+    -   Your local files (`./nfs/exports`) are mounted to `/staging` (Read-Only).
+    -   Attributes-compatible storage is provided by a Docker Named Volume mapped to `/exports`.
+2.  **Event-Driven Sync**:
+    -   The `nfs` container runs `inotifywait` to watch `/staging`.
+    -   When you save a file locally, it is instantly (<100ms) synced to the NFS export volume.
+    -   This gives you the best of both worlds: **Native NFSv4 compatibility** and **instant local updates**.
 
 **Key Requirements:**
-1.  **Privileged Mode**: The `nfs` container runs with `privileged: true` because it needs to mount kernel filesystems (`rpc_pipefs`, `nfsd`) inside the container.
-2.  **Explicit Protocol Support**: We strictly use NFSv4 (`rpc.nfsd -V 4 -N 3`).
-3.  **Client Tracking**: We run `nfsdcld` to handle the NFSv4 Grace Period. If this daemon fails, clients may hang for 90s on boot.
+1.  **Privileged Mode**: `nfs` container runs with `privileged: true` for NFS kernel capabilities.
+2.  **Explicit Protocol Support**: We strictly use NFSv4 (disabled NFSv3 to avoid port randomisation issues).
+3.  **Client Tracking**: `nfsdcld` handles the NFSv4 Grace Period.
 
 **Port Usage:**
 To ensure Docker networking reliability, we pin all RPC services to fixed ports:
