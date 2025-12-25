@@ -50,7 +50,8 @@ services:
       - nfs_data:/exports/shared
 
     networks:
-      - nfs_net
+      nfs_net:
+        ipv4_address: 172.28.0.10
 
   db-primary:
     image: mariadb:10.11-ubi9
@@ -101,6 +102,9 @@ networks:
   nfs_net:
     driver: bridge
     internal: true
+    ipam:
+      config:
+        - subnet: 172.28.0.0/16
 
 volumes:
   mariadb_data:

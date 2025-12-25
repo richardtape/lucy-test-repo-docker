@@ -2,9 +2,12 @@
 #exit on error, unset variable, pipeline fail
 set -euo pipefail
 
+# Static NFS server IP (configured in docker-compose.yml)
+NFS_IP="172.28.0.10"
+
 # Wait for NFS server to be ready (port 2049 must be open)
-echo "Waiting for NFS server port to be ready..."
-until nc -z nfs 2049; do
+echo "Waiting for NFS server at $NFS_IP:2049 to be ready..."
+until nc -z "$NFS_IP" 2049; do
     echo "NFS server not ready yet..."
     sleep 1
 done
@@ -12,17 +15,14 @@ echo "NFS server port is open"
 
 # Give NFS server a moment to fully initialize its exports
 sleep 2
-
-# Resolve NFS hostname to IP for logging
-NFS_IP=$(getent hosts nfs | awk '{print $1}')
-echo "Resolved NFS server IP: $NFS_IP"
+echo "Using NFS server IP: $NFS_IP"
 
 # Create mount point
 echo "Creating mount point at /www_data/www"
 mkdir -p /www_data/www
 
 # Mount NFS share (mirrors production /etc/fstab mount)
-echo "Mounting NFS share nfs:/ -> /www_data/www"
+echo "Mounting NFS share $NFS_IP:/ -> /www_data/www"
 
 # Check if NFS kernel modules are available
 echo "Checking NFS kernel support..."
@@ -34,8 +34,15 @@ echo "Attempting mount with verbose output..."
 MOUNT_OPTS="nfsvers=4,soft,timeo=50,retrans=2,nolock,proto=tcp,port=2049"
 echo "Using mount options: $MOUNT_OPTS"
 
-# Capture mount output including errors
-mount -v -t nfs4 -o "$MOUNT_OPTS" nfs:/ /www_data/www 2>&1 && MOUNT_SUCCESS=true || MOUNT_SUCCESS=false
+# Run mount with timeout using IP address
+echo "Running: mount -v -t nfs4 -o $MOUNT_OPTS $NFS_IP:/ /www_data/www"
+if timeout 30 mount -v -t nfs4 -o "$MOUNT_OPTS" "$NFS_IP":/ /www_data/www; then
+    MOUNT_SUCCESS=true
+else
+    MOUNT_EXIT_CODE=$?
+    echo "Mount exited with code: $MOUNT_EXIT_CODE"
+    MOUNT_SUCCESS=false
+fi
 
 if [ "$MOUNT_SUCCESS" = "true" ]; then
     echo "NFS mount successful"
