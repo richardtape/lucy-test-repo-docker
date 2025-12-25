@@ -4,7 +4,8 @@ FROM rockylinux/rockylinux:9
 RUN dnf clean all && rm -rf /var/cache/dnf
 
 # Install NFS utilities
-RUN dnf -y install nfs-utils rpcbind
+RUN dnf -y install nfs-utils rpcbind procps-ng iproute
+
 RUN dnf clean all
 
 # Create the shared service identity (match this in web-node too)
@@ -20,7 +21,7 @@ RUN chmod +x /usr/local/bin/entrypoint.sh
 
 
 # Expose NFS-related ports
-EXPOSE 2049
+EXPOSE 111 2049 20048
 
 #run entrypoint.sh
 ENTRYPOINT [ "/usr/local/bin/entrypoint.sh" ]
