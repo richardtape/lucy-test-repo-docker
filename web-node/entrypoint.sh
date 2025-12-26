@@ -2,8 +2,7 @@
 #exit on error, unset variable, pipeline fail
 set -euo pipefail
 
-# Static NFS server IP (configured in docker-compose.yml)
-NFS_IP="172.28.0.10"
+
 
 # Wait for NFS server to be ready (port 2049 must be open)
 echo "Waiting for NFS server at $NFS_IP:2049 to be ready..."
