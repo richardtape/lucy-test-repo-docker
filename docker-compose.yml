@@ -1,24 +1,100 @@
-services:
-  web-node:
-    build:
-      context: ./web-node
-    image: local/rocky-apache-php:${IMAGE_TAG}
+# =============================================================================
+# Docker Compose Configuration - Local Development Stack
+# =============================================================================
+#
+# ARCHITECTURE:
+#
+#   [Client Browser]
+#         |
+#         v (https://cms.test:443)
+#   [Load Balancer] (Nginx - SSL termination, sticky sessions)
+#         |
+#         +---> [web-node-1] (Apache + PHP-FPM)
+#         |           |
+#         +---> [web-node-2] (Apache + PHP-FPM)
+#                     |
+#                     v
+#               [NFS Server] (Shared /www_data/www)
+#
+#   [db-primary] <--replication--> [db-secondary]
+#
+# NETWORKS:
+#   - app_net: Public-facing (load balancer external access)
+#   - web_net: Internal (load balancer <-> web nodes)
+#   - db_net: Internal (web nodes <-> db-primary)
+#   - db_secondary_net: Internal (db-primary <-> db-secondary)
+#   - nfs_net: Internal (web nodes <-> NFS server)
+#
+# =============================================================================
 
-    env_file:
-      - .env
+services:
+  # ---------------------------------------------------------------------------
+  # LOAD BALANCER (Nginx)
+  # ---------------------------------------------------------------------------
+  # Entry point for all HTTP/HTTPS traffic. Handles:
+  #   - SSL termination
+  #   - Cookie-based sticky sessions (SERVERID cookie)
+  #   - Health checks to backend web nodes
+  #   - Round-robin load distribution for new sessions
+  # ---------------------------------------------------------------------------
+  load-balancer:
+    image: nginx:alpine
+    container_name: load-balancer
 
     ports:
       - "80:80"
       - "443:443"
 
+    volumes:
+      # Nginx configuration
+      - ./load-balancer/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./load-balancer/proxy_params.conf:/etc/nginx/proxy_params.conf:ro
+      # SSL certificates (same as web nodes for consistency)
+      - ./web-node/certs/localhost.crt:/etc/nginx/certs/localhost.crt:ro
+      - ./web-node/certs/localhost.key:/etc/nginx/certs/localhost.key:ro
+
+    depends_on:
+      - web-node-1
+      - web-node-2
+
+    networks:
+      - app_net
+      - web_net
+
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost/lb-health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
+  # ---------------------------------------------------------------------------
+  # WEB NODE 1 (Apache + PHP-FPM)
+  # ---------------------------------------------------------------------------
+  # First web server instance. Identical to web-node-2.
+  # Sets SERVERID cookie and X-Served-By header for sticky session tracking.
+  # ---------------------------------------------------------------------------
+  web-node-1:
+    build:
+      context: ./web-node
+    image: local/rocky-apache-php:${IMAGE_TAG}
+    container_name: web-node-1
+
+    env_file:
+      - .env
+
+    environment:
+      # Node identifier for sticky sessions and debugging
+      - NODE_NAME=web-node-1
+
     # Required for mounting NFS inside the container (mirrors /etc/fstab mount in production)
     privileged: true
 
     volumes:
-      #SSL certs
+      # SSL certs
       - ./web-node/certs/localhost.crt:/etc/pki/tls/certs/localhost.crt:ro
       - ./web-node/certs/localhost.key:/etc/pki/tls/private/localhost.key:ro
-      # Apache custom conf 
+      # Apache custom conf
       - ./web-node/conf/apache/apache-local.conf:/etc/httpd/conf.d/apache-local.conf:ro
       # PHP runtime custom conf
       - ./web-node/conf/php/99-php.ini:/etc/php.d/99-php.ini:ro
@@ -30,10 +106,58 @@ services:
       - nfs
 
     networks:
-      - app_net
+      - web_net
       - db_net
       - nfs_net
 
+  # ---------------------------------------------------------------------------
+  # WEB NODE 2 (Apache + PHP-FPM)
+  # ---------------------------------------------------------------------------
+  # Second web server instance. Identical to web-node-1.
+  # Sets SERVERID cookie and X-Served-By header for sticky session tracking.
+  # ---------------------------------------------------------------------------
+  web-node-2:
+    build:
+      context: ./web-node
+    image: local/rocky-apache-php:${IMAGE_TAG}
+    container_name: web-node-2
+
+    env_file:
+      - .env
+
+    environment:
+      # Node identifier for sticky sessions and debugging
+      - NODE_NAME=web-node-2
+
+    # Required for mounting NFS inside the container (mirrors /etc/fstab mount in production)
+    privileged: true
+
+    volumes:
+      # SSL certs
+      - ./web-node/certs/localhost.crt:/etc/pki/tls/certs/localhost.crt:ro
+      - ./web-node/certs/localhost.key:/etc/pki/tls/private/localhost.key:ro
+      # Apache custom conf
+      - ./web-node/conf/apache/apache-local.conf:/etc/httpd/conf.d/apache-local.conf:ro
+      # PHP runtime custom conf
+      - ./web-node/conf/php/99-php.ini:/etc/php.d/99-php.ini:ro
+      # PHP-FPM pool override custom conf
+      - ./web-node/conf/php/zzz-env.conf:/etc/php-fpm.d/zzz-env.conf:ro
+
+    depends_on:
+      - db-primary
+      - nfs
+
+    networks:
+      - web_net
+      - db_net
+      - nfs_net
+
+  # ---------------------------------------------------------------------------
+  # NFS SERVER (NFS-Ganesha)
+  # ---------------------------------------------------------------------------
+  # Provides shared storage for web nodes, mirroring production NFS setup.
+  # Uses sync strategy for macOS compatibility.
+  # ---------------------------------------------------------------------------
   nfs:
     build:
       context: ./nfs
@@ -41,7 +165,7 @@ services:
     container_name: nfs
     privileged: true
 
-    # backing storage for the export
+    # Backing storage for the export
     # Sync Strategy:
     # 1. Mount host directory to /staging (read-only) for inotify/rsync
     # 2. Use named volume 'nfs_export_data' for actual NFS export (native Linux FS)
@@ -53,6 +177,11 @@ services:
       nfs_net:
         ipv4_address: ${NFS_IP}
 
+  # ---------------------------------------------------------------------------
+  # DATABASE PRIMARY (MariaDB)
+  # ---------------------------------------------------------------------------
+  # Primary database server. Replicates to db-secondary.
+  # ---------------------------------------------------------------------------
   db-primary:
     image: mariadb:10.11-ubi9
     container_name: db-primary
@@ -69,6 +198,11 @@ services:
       - db_net
       - db_secondary_net
 
+  # ---------------------------------------------------------------------------
+  # DATABASE SECONDARY (MariaDB)
+  # ---------------------------------------------------------------------------
+  # Secondary database server. Receives replication from db-primary.
+  # ---------------------------------------------------------------------------
   db-secondary:
     image: mariadb:10.11-ubi9
     container_name: db-secondary
@@ -87,18 +221,30 @@ services:
     networks:
       - db_secondary_net
 
+# =============================================================================
+# NETWORKS
+# =============================================================================
 networks:
+  # Public-facing network (load balancer external access)
   app_net:
     driver: bridge
 
+  # Internal network for load balancer <-> web nodes communication
+  web_net:
+    driver: bridge
+    internal: true
+
+  # Internal network for web nodes <-> database communication
   db_net:
     driver: bridge
     internal: true
 
+  # Internal network for database replication
   db_secondary_net:
     driver: bridge
     internal: true
 
+  # Internal network for web nodes <-> NFS communication
   nfs_net:
     driver: bridge
     internal: true
@@ -106,10 +252,11 @@ networks:
       config:
         - subnet: ${NFS_SUBNET}
 
+# =============================================================================
+# VOLUMES
+# =============================================================================
 volumes:
   mariadb_data:
   mariadb_secondary_data:
   nfs_data:
   nfs_export_data:
-
-
