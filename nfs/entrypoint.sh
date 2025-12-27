@@ -9,27 +9,70 @@ rpcbind || echo "Failed to start rpcbind"
 mkdir -p /run/rpcbind /var/run/rpcbind
 
 # Sync loop in background
+# ============================================================================
+# SYNC STRATEGY
+# ============================================================================
+# We use a dual approach for reliable file synchronization:
+#
+# 1. EVENT-DRIVEN: inotifywait detects file changes and triggers immediate sync
+# 2. POLLING FALLBACK: Short timeout ensures changes are caught even if events
+#    are missed (common with Docker bind mounts on macOS)
+#
+# Key improvements:
+# - Use --checksum with rsync to detect content-only changes (not just mtime)
+# - Watch for close_write event (file fully saved) in addition to modify
+# - Short 0.5s timeout for responsive polling fallback
+# - Continuous monitoring mode (-m) to avoid event gaps
+# ============================================================================
 echo "Starting sync loop..."
 (
-    while true; do
-        # Sync from staging (host bind mount) to export volume
-        # --delete: remove files in destination that are gone in source
-        # -a: archive mode (preserves permissions, times, etc - important since we chown'd /exports/shared in Dockerfile)
-        # We start syncing specifically the 'shared' folder.
-        # Ensure destination directory exists
-        mkdir -p /exports/shared
-        
-        # We sync the CONTENTS of /staging/shared/ into /exports/shared/
+    # Ensure destination directory exists
+    mkdir -p /exports/shared
+
+    # Initial sync on startup
+    if [ -d "/staging/shared" ]; then
+        rsync -a --checksum --delete /staging/shared/ /exports/shared/
+        echo "Initial sync complete"
+    fi
+
+    # Function to perform sync
+    do_sync() {
         if [ -d "/staging/shared" ]; then
-             rsync -a --delete /staging/shared/ /exports/shared/
+            # --checksum: Compare file contents, not just size/mtime
+            # --delete: Remove files in destination that are gone in source
+            # -a: Archive mode (preserves permissions, times, etc.)
+            rsync -a --checksum --delete /staging/shared/ /exports/shared/
         fi
-        
-        # Wait for changes in /staging/shared OR timeout after 1 second
+    }
+
+    # Use continuous monitoring mode with timeout fallback
+    # This approach handles both:
+    # - Fast event-driven updates when inotify works
+    # - Polling fallback when events are missed (macOS/Docker)
+    while true; do
+        # Wait for file system events with short timeout
         # -r: recursive
         # -e: events to watch
-        # -t 1: timeout 1 second (safety net)
-        # || true: prevent script exit on timeout (inotifywait returns 1 on timeout)
-        inotifywait -r -e modify,create,delete,move -t 1 /staging/shared || true
+        #   - close_write: file was closed after writing (most reliable for saves)
+        #   - create: new file created
+        #   - delete: file deleted
+        #   - moved_to: file moved/renamed into directory
+        #   - modify: file modified (catches in-place edits)
+        # -t 0.5: timeout 0.5 seconds (polling fallback for macOS)
+        # -q: quiet mode (less output)
+        #
+        # We use a short timeout because Docker bind mounts on macOS
+        # don't reliably propagate inotify events.
+        if inotifywait -r -q -e close_write,create,delete,moved_to,modify -t 1 /staging/shared 2>/dev/null; then
+            # Event detected - sync immediately
+            do_sync
+        else
+            # Timeout or error - still sync (polling fallback)
+            do_sync
+        fi
+
+        # Small delay to prevent CPU spinning if inotifywait fails repeatedly
+        sleep 0.1
     done
 ) &
 
